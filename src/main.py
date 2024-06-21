@@ -39,7 +39,7 @@ def keyword_link(product, keywords):
 
 def getNproducts(df, N=5):
     # hardcoded method to get a list of products from the df
-    # for testing porpouses only iterates 5 times
+    # for testing porpouses only iterates 'n' times
     count = 0
     max_iterations = N
     products = []
@@ -49,7 +49,7 @@ def getNproducts(df, N=5):
             row.USUARIO,
             row.TEMA,
         ]
-        product_str = f"Name: {row.DESCRIPCION}\n"  # Testing
+        product_str = f"Name: {row.DESCRIPCION}\n"
         categories_str = f"Categories: {', '.join(str(v) for v in categories)}"
         products.append(product_str + categories_str)
         count += 1
@@ -81,3 +81,4 @@ def main():
         product_keywords = keyword_link(product, keywords)
         insertIn_df(df_duplicate, product_keywords, index)
         index = index + 1
+    print(df_duplicate)
