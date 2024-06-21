@@ -1,5 +1,7 @@
+import os
 import json
 import pandas as pd
+from dotenv import load_dotenv
 from langchain_openai import ChatOpenAI
 from langchain_core.messages import HumanMessage, SystemMessage
 
@@ -66,14 +68,23 @@ def insertIn_df(df, product_keywords, index):
 
 
 def main():
+    # ----------------------------------------------------------------------------------
+    # Linking keywords to products
+    # ----------------------------------------------------------------------------------
+
+    load_dotenv("../.env")
     # getKeywords(), while not having this method we create a list of keywords
     keywords = "Disfraz Adulto, Carnaval, Disfraz Halloween, Disfraces chulos, Disfraces para fiestas"
     # getdf(), while not having this methos we take the file from the docs folder
-    df = pd.read_excel("docs/ARTICULOS ANTIGUOS GUIRCA_ESP.xlsx", sheet_name="Hoja1")
+    df = pd.read_excel(
+        "../docs/ARTICULOS ANTIGUOS GUIRCA_ESP.xlsx",
+        sheet_name="Hoja1",
+        engine="openpyxl",
+    )
     # clean the df
     df_cleaned = df[["DESCRIPCION", "COLORES", "USUARIO", "TEMA"]]
     # copy the df
-    df_duplicate = df.copy()
+    df_duplicate = df_cleaned.copy()
     products = getNproducts(df_cleaned, 3)
     # Link keywords and insert them into a new df
     index = 0
@@ -81,4 +92,3 @@ def main():
         product_keywords = keyword_link(product, keywords)
         insertIn_df(df_duplicate, product_keywords, index)
         index = index + 1
-    print(df_duplicate)
