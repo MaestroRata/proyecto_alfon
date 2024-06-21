@@ -92,3 +92,7 @@ def main():
         product_keywords = keyword_link(product, keywords)
         insertIn_df(df_duplicate, product_keywords, index)
         index = index + 1
+
+    # ----------------------------------------------------------------------------------
+    # Creating Titles
+    # ----------------------------------------------------------------------------------
