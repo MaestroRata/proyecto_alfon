@@ -19,6 +19,7 @@ def keyword_link(product, keywords):
             categories of several products, as well as a bunch of keywords. You
             need to deduce which keywords correspond to each product and create a response.
             Always response in the following JSON format: {"keywords": <response>} 
+            The response must be a single string with all the keywords separated by commas.
             """
         ),
         HumanMessage(content=f"keywords: {keywords}\n" f"products: {product}\n"),
@@ -27,16 +28,7 @@ def keyword_link(product, keywords):
     json_resp = json.loads(
         response.content
     )  # Parse output into a valid str to insert into df
-    product_keywords = json_resp["keywords"]
-    string = ""
-    count = 0
-    for item in product_keywords:
-        if count == 0:
-            string = string + item
-            count = count + 1
-        else:
-            string = string + ", " + item
-    return {string}
+    return {json_resp["keywords"]}
 
 
 def getNproducts(df, N=5, brand=False):
@@ -135,7 +127,7 @@ def main():
     df_cleaned = df[["DESCRIPCION", "COLORES", "USUARIO", "TEMA"]]
     # copy the df to insert the keywords without modifying the original df
     df_duplicate = df_cleaned.copy()
-    products = getNproducts(df_cleaned, 5)
+    products = getNproducts(df_cleaned, 3)
     # Link keywords and insert them into a new df
     index = 0
     for product in products:
@@ -147,7 +139,7 @@ def main():
     # ----------------------------------------------------------------------------------
     # Creating Titles
     # ----------------------------------------------------------------------------------
-    products = getNproducts(df_duplicate, 5, brand=True)
+    products = getNproducts(df_duplicate, 3, brand=True)
     for product in products:
         product_title = title_create(product)
         print(product_title)
