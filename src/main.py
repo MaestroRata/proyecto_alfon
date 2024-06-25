@@ -39,7 +39,7 @@ def keyword_link(product, keywords):
     return {string}
 
 
-def getNproducts(df, N=5):
+def getNproducts(df, N=5, brand=False):
     # hardcoded method to get a list of products from the df
     # for testing porpouses only iterates 'n' times
     count = 0
@@ -53,7 +53,16 @@ def getNproducts(df, N=5):
         ]
         product_str = f"Name: {row.DESCRIPCION}\n"
         categories_str = f"Categories: {', '.join(str(v) for v in categories)}"
-        products.append(product_str + categories_str)
+        # If brand is True, add the brand and the keywords to the product string
+        # This is created for the title_create function
+        if brand == True:
+            keywords = f"Keywords: {row.Keywords}\n"
+            product_brand = "Brand: Guirca\n"
+            products.append(
+                f"{product_brand} {product_str} {keywords} {categories_str}"
+            )
+        else:
+            products.append(f"{product_str} {categories_str}")
         count += 1
         if count >= max_iterations:
             break
@@ -68,22 +77,37 @@ def insertIn_df(df, product_keywords, index):
     return True
 
 
-def title_create(product):
+def title_create(product, language="spanish"):
     # """
     # This function takes in a product and returns a string with the corresponding title.
     # """
-    # NOT COMPLETED
     chat = ChatOpenAI(model="gpt-3.5-turbo")
     messages = [
         SystemMessage(
             content="""
-            You are an Amazon SEO expert. I will provide you with the name and 
-            categories of several products, as well as a bunch of keywords. You
-            need to deduce which keywords correspond to each product and create a response.
-            Always response in the following JSON format: {"keywords": <response>} 
+            You are an Amazon SEO expert. I will provide you with the brand, name, keywords and
+            categories of several products. You need to deduce a title for each product 
+            and create a structured response.
+            Always response in the following JSON format: {"title": <response>}
             """
         ),
-        HumanMessage(content=f"product: {product}\n"),
+        HumanMessage(
+            content=f"Deduce a title for this product: {product}\n Write your response in {language}"
+            + """ You need to follow several rules:
+            - The title should start with the brand name.
+            - The title must contain between 150-200 characters.
+            - All the parts of the title must contain keywords.
+            - Format the product name so it's not all in uppercase.
+            - Do not include the keywords rawly, but rather use them to create a coherent title.
+            - After the brand and name, you must include (if possible) the variant of the product between brackets.
+            Here is an example:
+            Brand: Kaffe
+            Name: Large French Press Coffee Maker 34oz/1L
+            Keywords: Coffee, French Press, Large, Matte Black, Free Plastic, Camping, Travel
+            Categories: Matte Black, Borosilicate Glass, Camping, 3 Level Filter
+            The title should be: Kaffe Large French Press Coffee Maker (34oz / 1L) - Thick Borosilicate Glass and BPA-Free Plastic Coffee Press - Matte Black - Lightweight Travel & Camping Coffee Maker - 3 Level Filter French Press
+            """
+        ),
     ]
     response = chat.invoke(messages)
     json_resp = json.loads(
@@ -91,7 +115,6 @@ def title_create(product):
     )  # Parse output into a valid str to insert into df
     product_title = json_resp["title"]
     return product_title
-    # NOT COMPLETED
 
 
 def main():
@@ -103,25 +126,32 @@ def main():
     # getKeywords(), while not having this method we create a list of keywords
     keywords = "Disfraz Adulto, Carnaval, Disfraz Halloween, Disfraces chulos, Disfraces para fiestas"
     # getdf(), while not having this methos we take the file from the docs folder
-    df = pd.read_excel(
-        "../docs/ARTICULOS ANTIGUOS GUIRCA_ESP.xlsx",
-        sheet_name="Hoja1",
-        engine="openpyxl",
-    )
-    # clean the df
+    # For interactive jupyter notebook use the following path
+    # df = pd.read_excel(
+    #    "C:/Users/alexa/OneDrive/Escritorio/AI Agency Project/GenAI/proyecto_alfon/docs/articulos_guirca.xlsx",
+    # )
+    df = pd.read_excel(r"docs\articulos_guirca.xlsx")
+    # clean the df to only have the columns we need
     df_cleaned = df[["DESCRIPCION", "COLORES", "USUARIO", "TEMA"]]
-    # copy the df
+    # copy the df to insert the keywords without modifying the original df
     df_duplicate = df_cleaned.copy()
-    products = getNproducts(df_cleaned, 3)
+    products = getNproducts(df_cleaned, 5)
     # Link keywords and insert them into a new df
     index = 0
     for product in products:
         product_keywords = keyword_link(product, keywords)
+        print(product_keywords)
         insertIn_df(df_duplicate, product_keywords, index)
         index = index + 1
 
     # ----------------------------------------------------------------------------------
     # Creating Titles
     # ----------------------------------------------------------------------------------
+    products = getNproducts(df_duplicate, 5, brand=True)
     for product in products:
         product_title = title_create(product)
+        print(product_title)
+
+
+if __name__ == "__main__":
+    main()
