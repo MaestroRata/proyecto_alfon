@@ -61,10 +61,37 @@ def getNproducts(df, N=5):
 
 
 def insertIn_df(df, product_keywords, index):
+    # This function takes in a dataframe, a list of keywords and an index and inserts the keywords into the dataframe.
     if "Keywords" not in df.columns:
         df["Keywords"] = None  # Initialize the column with None values
     df.at[index, "Keywords"] = product_keywords
     return True
+
+
+def title_create(product):
+    # """
+    # This function takes in a product and returns a string with the corresponding title.
+    # """
+    # NOT COMPLETED
+    chat = ChatOpenAI(model="gpt-3.5-turbo")
+    messages = [
+        SystemMessage(
+            content="""
+            You are an Amazon SEO expert. I will provide you with the name and 
+            categories of several products, as well as a bunch of keywords. You
+            need to deduce which keywords correspond to each product and create a response.
+            Always response in the following JSON format: {"keywords": <response>} 
+            """
+        ),
+        HumanMessage(content=f"product: {product}\n"),
+    ]
+    response = chat.invoke(messages)
+    json_resp = json.loads(
+        response.content
+    )  # Parse output into a valid str to insert into df
+    product_title = json_resp["title"]
+    return product_title
+    # NOT COMPLETED
 
 
 def main():
@@ -96,3 +123,5 @@ def main():
     # ----------------------------------------------------------------------------------
     # Creating Titles
     # ----------------------------------------------------------------------------------
+    for product in products:
+        product_title = title_create(product)
