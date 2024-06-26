@@ -31,7 +31,7 @@ def keyword_link(product, keywords):
     return {json_resp["keywords"]}
 
 
-def getNproducts(df, N=5, brand=False):
+def getNproducts(df, N=5, brand=False, title=False, bullet_points=False):
     # hardcoded method to get a list of products from the df
     # for testing porpouses only iterates 'n' times
     count = 0
@@ -46,13 +46,27 @@ def getNproducts(df, N=5, brand=False):
         product_str = f"Name: {row.DESCRIPCION}\n"
         categories_str = f"Categories: {', '.join(str(v) for v in categories)}"
         # If brand is True, add the brand and the keywords to the product string
-        # This is created for the title_create function
+        # Created for the title_create function
         if brand == True:
             keywords = f"Keywords: {row.Keywords}\n"
             product_brand = "Brand: Guirca\n"
             products.append(
                 f"{product_brand} {product_str} {keywords} {categories_str}"
             )
+        # Created for the bullet_points_create function
+        if title == True:
+            keywords = f"Keywords: {row.Keywords}\n"
+            product_title = f"Title: {row.Title}\n"
+            # Created for the description_create function
+            if bullet_points == True:
+                bullet_points = f"Bullet Points: {row.Bullet_Points}\n"
+                products.append(
+                    f"{product_title} {product_str} {keywords} {categories_str} {bullet_points}"
+                )
+            else:
+                products.append(
+                    f"{product_title} {product_str} {keywords} {categories_str}"
+                )
         else:
             products.append(f"{product_str} {categories_str}")
         count += 1
@@ -61,11 +75,11 @@ def getNproducts(df, N=5, brand=False):
     return products
 
 
-def insertIn_df(df, product_keywords, index):
+def insertIn_df(df, llm_output, index, column):
     # This function takes in a dataframe, a list of keywords and an index and inserts the keywords into the dataframe.
-    if "Keywords" not in df.columns:
-        df["Keywords"] = None  # Initialize the column with None values
-    df.at[index, "Keywords"] = product_keywords
+    if column not in df.columns:
+        df[column] = None  # Initialize the column with None values
+    df.at[index, column] = llm_output
     return True
 
 
@@ -85,7 +99,7 @@ def title_create(product, language="spanish"):
         ),
         HumanMessage(
             content=f"Deduce a title for this product: {product}\n Write your response in {language}"
-            + """ You need to follow several rules:
+            + """ You need to follow these rules:
             - The title should start with the brand name.
             - The title must contain between 150-200 characters.
             - All the parts of the title must contain keywords.
@@ -109,6 +123,88 @@ def title_create(product, language="spanish"):
     return product_title
 
 
+def bullet_points_create(product, language="spanish"):
+    # """
+    # This function takes in a product and returns a string with the corresponding bullet points.
+    # """
+    chat = ChatOpenAI(model="gpt-3.5-turbo")
+    messages = [
+        SystemMessage(
+            content="""
+            You are an Amazon SEO expert. I will provide you with the brand, name, keywords and
+            categories of several products. You need to deduce bullet points for each product 
+            and create a structured response.
+            Always response in the following JSON format: {"bullet_points": <response>}
+            """
+        ),
+        HumanMessage(  # Change this ------------------------------
+            content=f"Deduce bullet points for this product: {product}\n Write your response in {language}"
+            + """ You need to follow these rules:
+            - The bullet points must contain between 200-250 characters.
+            - The bullet points must contain all the keywords.
+            - Format the product name so it's not all in uppercase.
+            - Do not include the keywords rawly, but rather use them to create coherent bullet points.
+            Here is an example:
+            Brand: Kaffe
+            Name: Large French Press Coffee Maker 34oz/1L
+            Keywords: Coffee, French Press, Large, Matte Black, Free Plastic, Camping, Travel
+            Categories: Matte Black, Borosilicate Glass, Camping, 3 Level Filter
+            The bullet points should be: 
+            - Large French Press Coffee Maker (34oz / 1L) for Home, Office, Travel, and Camping
+            - Durable Matte Black Finish with BPA-Free Plastic and Borosilicate Glass
+            """
+        ),  # -----------------------------------------------------
+    ]
+    response = chat.invoke(messages)
+    json_resp = json.loads(
+        response.content
+    )  # Parse output into a valid str to insert into df
+    product_bullet_points = json_resp["bullet_points"]
+    return product_bullet_points
+
+
+def description_create(product, language="spanish"):
+    # """
+    # This function takes in a product and returns a string with the corresponding description.
+    # """
+    chat = ChatOpenAI(model="gpt-3.5-turbo")
+    messages = [
+        SystemMessage(
+            content="""
+            You are an Amazon SEO expert. I will provide you with the brand, name, keywords and
+            categories of several products. You need to deduce a description for each product 
+            and create a structured response.
+            Always response in the following JSON format: {"description": <response>}
+            """
+        ),
+        HumanMessage(  # Change this ------------------------------
+            content=f"Deduce a description for this product: {product}\n Write your response in {language}"
+            + """ You need to follow these rules:
+            - The description must contain between 300-400 characters.
+            - The description must contain all the keywords.
+            - Format the product name so it's not all in uppercase.
+            - Do not include the keywords rawly, but rather use them to create coherent descriptions.
+            Here is an example:
+            Brand: Kaffe
+            Name: Large French Press Coffee Maker 34oz/1L
+            Keywords: Coffee, French Press, Large, Matte Black, Free Plastic, Camping, Travel
+            Categories: Matte Black, Borosilicate Glass, Camping, 3 Level Filter
+            The description should be: 
+            The Kaffe Large French Press Coffee Maker is the perfect coffee maker for home, office, travel, and camping. 
+            It features a durable matte black finish with BPA-free plastic and borosilicate glass. 
+            The 34oz / 1L capacity is perfect for sharing with friends and family. 
+            The 3 level filter ensures that your coffee is smooth and delicious every time.
+            """
+        ),  # -----------------------------------------------------
+    ]
+    response = chat.invoke(messages)
+    json_resp = json.loads(
+        response.content
+    )  # Parse output into a valid str to insert into df
+    product_description = json_resp["description"]
+    return product_description
+
+
 def main():
     # ----------------------------------------------------------------------------------
     # Linking keywords to products
@@ -116,7 +212,7 @@ def main():
 
     load_dotenv("../.env")
     # getKeywords(), while not having this method we create a list of keywords
-    keywords = "Disfraz Adulto, Carnaval, Disfraz Halloween, Disfraces chulos, Disfraces para fiestas"
+    keywords = """Disfraz Adulto, Carnaval, Disfraz Halloween, Disfraces chulos, Disfraces para fiestas"""
     # getdf(), while not having this methos we take the file from the docs folder
     # For interactive jupyter notebook use the following path
     # df = pd.read_excel(
@@ -133,16 +229,43 @@ def main():
     for product in products:
         product_keywords = keyword_link(product, keywords)
         print(product_keywords)
-        insertIn_df(df_duplicate, product_keywords, index)
+        insertIn_df(df_duplicate, product_keywords, index, "Keywords")
         index = index + 1
 
     # ----------------------------------------------------------------------------------
     # Creating Titles
     # ----------------------------------------------------------------------------------
     products = getNproducts(df_duplicate, 3, brand=True)
+    index = 0
     for product in products:
         product_title = title_create(product)
         print(product_title)
+        insertIn_df(df_duplicate, product_title, index, "Title")
+        index = index + 1
+
+    # ----------------------------------------------------------------------------------
+    # Creating Bullet Points
+    # ----------------------------------------------------------------------------------
+
+    products = getNproducts(df_duplicate, 3, title=True)
+    index = 0
+    for product in products:
+        product_bullet_points = bullet_points_create(product)
+        print(product_bullet_points)
+        insertIn_df(df_duplicate, product_bullet_points, index, "Bullet_Points")
+        index = index + 1
+
+    # ----------------------------------------------------------------------------------
+    # Creating Description
+    # ----------------------------------------------------------------------------------
+
+    products = getNproducts(df_duplicate, 3, title=True, bullet_points=True)
+    index = 0
+    for product in products:
+        product_description = description_create(product)
+        print(product_description)
+        insertIn_df(df_duplicate, product_description, index, "Description")
+        index = index + 1
 
 
 if __name__ == "__main__":
