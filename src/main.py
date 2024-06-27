@@ -31,7 +31,7 @@ def keyword_link(product, keywords):
     return {json_resp["keywords"]}
 
 
-def getNproducts(df, N=5, brand=False, title=False, bullet_points=False):
+def getNproducts(df, N=5, brand=False, title=False):
     # hardcoded method to get a list of products from the df
     # for testing porpouses only iterates 'n' times
     count = 0
@@ -58,15 +58,9 @@ def getNproducts(df, N=5, brand=False, title=False, bullet_points=False):
             keywords = f"Keywords: {row.Keywords}\n"
             product_title = f"Title: {row.Title}\n"
             # Created for the description_create function
-            if bullet_points == True:
-                bullet_points = f"Bullet Points: {row.Bullet_Points}\n"
-                products.append(
-                    f"{product_title} {product_str} {keywords} {categories_str} {bullet_points}"
-                )
-            else:
-                products.append(
-                    f"{product_title} {product_str} {keywords} {categories_str}"
-                )
+            products.append(
+                f"{product_title} {product_str} {keywords} {categories_str}"
+            )
         else:
             products.append(f"{product_str} {categories_str}")
         count += 1
@@ -137,23 +131,28 @@ def bullet_points_create(product, language="spanish"):
             Always response in the following JSON format: {"bullet_points": <response>}
             """
         ),
-        HumanMessage(  # Change this ------------------------------
+        HumanMessage(
             content=f"Deduce bullet points for this product: {product}\n Write your response in {language}"
             + """ You need to follow these rules:
-            - The bullet points must contain between 200-250 characters.
+            - You must create 5 bullet points.
             - The bullet points must contain all the keywords.
+            - Every bullet point must contain 500 characters.
             - Format the product name so it's not all in uppercase.
             - Do not include the keywords rawly, but rather use them to create coherent bullet points.
+            - Add an emoji at the beginning of each bullet point.
             Here is an example:
-            Brand: Kaffe
+            Title: Kaffe Large French Press Coffee Maker (34oz / 1L) - Thick Borosilicate Glass and BPA-Free Plastic Coffee Press - Matte Black - Lightweight Travel & Camping Coffee Maker - 3 Level Filter French Press
             Name: Large French Press Coffee Maker 34oz/1L
             Keywords: Coffee, French Press, Large, Matte Black, Free Plastic, Camping, Travel
             Categories: Matte Black, Borosilicate Glass, Camping, 3 Level Filter
             The bullet points should be: 
-            - Large French Press Coffee Maker (34oz / 1L) for Home, Office, Travel, and Camping
-            - Durable Matte Black Finish with BPA-Free Plastic and Borosilicate Glass
+            🌱 UNIVERSAL ECO-FRIENDLY DESIGN: Kaffe french press coffee maker will be your ideal choice because of its efficient and timeless design, with no need for plastic capsules, coffee pods or paper filters. The coffee pot is made from taste-neutral borosilicate glass that ensures years of use. This classic French press coffee maker is the simplest way to a fragrant brew.
+            ♨️ KEEP YOUR COFFEE HOT FOR A LONG TIME: Our french press coffee maker will keep your coffee, tea or beverage warm for up to 4 times longer than a glass coffee press. Its double wall insulation is designed to keep the heat inside and away from your hands. It can be the key to jump start your day.
+            ☕️ LONG-LASTING TASTE AND AROMATIC COFFEE OILS ARE GUARANTEED:This coffee press is designed with dual-filter screen and composed of a sandwich of steel mesh held in place to increase the smoothness of the brew and let the orginal taste of grounds last for hours.
+            ⚙️ BALANCE BETWEEN CAPACITY, LONG LASTING USAGE AND SAFETY. Kaffe large french press has a 6-Cup Capacity (800 ml / 27 oz). An additional filter included with our french press coffee ensures long lasting and durable usage with no rust. At the same time, it maintains the pure taste of coffee with the best aromas without any additional VS cheap analoges.
+            💯 LIFETIME MANUFACTURER'S WARRANTY - We take pride the quality of our Kaffe camping coffee pot and our record speaks for itself. We promise to treat you like family! Covers any damage or defect. Money back guarantee!
             """
-        ),  # -----------------------------------------------------
+        ),
     ]
     response = chat.invoke(messages)
     json_resp = json.loads(
@@ -180,12 +179,11 @@ def description_create(product, language="spanish"):
         HumanMessage(  # Change this ------------------------------
             content=f"Deduce a description for this product: {product}\n Write your response in {language}"
             + """ You need to follow these rules:
-            - The description must contain between 300-400 characters.
+            - The description must contain 2000 characters.
             - The description must contain all the keywords.
-            - Format the product name so it's not all in uppercase.
             - Do not include the keywords rawly, but rather use them to create coherent descriptions.
             Here is an example:
-            Brand: Kaffe
+            Title: Kaffe Large French Press Coffee Maker (34oz / 1L) - Thick Borosilicate Glass and BPA-Free Plastic Coffee Press - Matte Black - Lightweight Travel & Camping Coffee Maker - 3 Level Filter French Press
             Name: Large French Press Coffee Maker 34oz/1L
             Keywords: Coffee, French Press, Large, Matte Black, Free Plastic, Camping, Travel
             Categories: Matte Black, Borosilicate Glass, Camping, 3 Level Filter
@@ -223,7 +221,7 @@ def main():
     df_cleaned = df[["DESCRIPCION", "COLORES", "USUARIO", "TEMA"]]
     # copy the df to insert the keywords without modifying the original df
     df_duplicate = df_cleaned.copy()
-    products = getNproducts(df_cleaned, 3)
+    products = getNproducts(df_cleaned, 1)
     # Link keywords and insert them into a new df
     index = 0
     for product in products:
@@ -235,7 +233,7 @@ def main():
     # ----------------------------------------------------------------------------------
     # Creating Titles
     # ----------------------------------------------------------------------------------
-    products = getNproducts(df_duplicate, 3, brand=True)
+    products = getNproducts(df_duplicate, 1, brand=True)
     index = 0
     for product in products:
         product_title = title_create(product)
@@ -244,26 +242,17 @@ def main():
         index = index + 1
 
     # ----------------------------------------------------------------------------------
-    # Creating Bullet Points
+    # Creating Bullet Points and Descriptions
     # ----------------------------------------------------------------------------------
 
-    products = getNproducts(df_duplicate, 3, title=True)
+    products = getNproducts(df_duplicate, 1, title=True)
     index = 0
     for product in products:
         product_bullet_points = bullet_points_create(product)
-        print(product_bullet_points)
-        insertIn_df(df_duplicate, product_bullet_points, index, "Bullet_Points")
-        index = index + 1
-
-    # ----------------------------------------------------------------------------------
-    # Creating Description
-    # ----------------------------------------------------------------------------------
-
-    products = getNproducts(df_duplicate, 3, title=True, bullet_points=True)
-    index = 0
-    for product in products:
         product_description = description_create(product)
+        print(product_bullet_points)
         print(product_description)
+        insertIn_df(df_duplicate, product_bullet_points, index, "Bullet_Points")
         insertIn_df(df_duplicate, product_description, index, "Description")
         index = index + 1
 
